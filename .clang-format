@@ -1,0 +1,29 @@
+---
+Language: Cpp
+# On se base sur Microsoft qui est déjà proche
+BasedOnStyle: Microsoft
+Standard: c++20
+
+# --- Indentation ---
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+
+# --- Accolades (Le point critique) ---
+# Allman = Nouvelle ligne partout. C'est CA qui règle ton problème.
+BreakBeforeBraces: Allman
+
+# --- Namespaces ---
+# Indenter le contenu des namespaces
+NamespaceIndentation: Inner
+
+# --- C++ Spécifique ---
+PointerAlignment: Left
+ColumnLimit: 120
+
+# --- Force les blocs sur plusieurs lignes ---
+AllowShortIfStatementsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortBlocksOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+IndentCaseLabels: true

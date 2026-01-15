@@ -1,0 +1,39 @@
+# "Microsoft" est le style de base le plus proche du C#
+BasedOnStyle:    Microsoft
+
+Standard:        c++20
+
+# --- Indentation ---
+IndentWidth:     4
+TabWidth:        4
+UseTab:          Never
+
+# --- Namespaces (Le décalage demandé) ---
+# "All" force l'indentation du code à l'intérieur du namespace
+NamespaceIndentation: Inner
+
+# --- Accolades (Style C# / Allman) ---
+# Force le retour à la ligne pour toutes les accolades
+BreakBeforeBraces: Allman
+
+# --- C++ Spécifique ---
+# Aligner les pointeurs à gauche (int* p) comme en C# (références implicites)
+PointerAlignment: Left
+
+# Limite de colonnes
+ColumnLimit:     120
+
+# --- Règles C# Like ---
+# Pas de if sur une ligne (force les accolades et le retour ligne)
+AllowShortIfStatementsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortBlocksOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+
+# Gestion des switch/case (Indenter le case par rapport au switch)
+IndentCaseLabels: true
+
+# Espaces
+SpaceAfterTemplateKeyword: false
+SpaceBeforeAssignmentOperators: true
+SpaceInEmptyParentheses: false

@@ -1,0 +1,31 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# C++ sources
+*.cpp text eol=lf
+*.h text eol=lf
+*.hpp text eol=lf
+*.c text eol=lf
+
+# CMake
+CMakeLists.txt text eol=lf
+*.cmake text eol=lf
+
+# Documentation
+*.md text eol=lf
+*.txt text eol=lf
+
+# Scripts
+*.sh text eol=lf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Config files
+*.json text eol=lf
+
+# Binary files
+*.png binary
+*.ico binary
+*.jpg binary
+*.jpeg binary
+*.gif binary

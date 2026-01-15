@@ -1,0 +1,58 @@
+# Build directories
+build/
+cmake-build-*/
+out/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Compiled files
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
+
+# CMake
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+compile_commands.json
+
+# Dependencies (fetched by CMake)
+_deps/
+
+# Config files (generated at runtime)
+engines.json
+projects.json
+config.json
+
+# OS specific
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# Old Go project artifacts
+main
+go.work
+go.work.sum
+.env
+unreal-pm
+unreal-pm.exe
+
+.claude
+.cache
+_deps
