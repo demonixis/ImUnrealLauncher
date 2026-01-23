@@ -103,6 +103,7 @@ set(HEADERS
     src/config.h
     src/Styles/ModernOrangeStyle.h
     src/Styles/Styles.h
+    src/Styles/Roboto-Regular.h
 )
 
 # Main executable

@@ -42,7 +42,7 @@ bool UI::init()
 #endif
 
     // Create window
-    m_window = glfwCreateWindow(1024, 768, "Unreal Launcher", nullptr, nullptr);
+    m_window = glfwCreateWindow(1366, 768, "Unreal Launcher", nullptr, nullptr);
     if (!m_window)
     {
         spdlog::error("Failed to create GLFW window");

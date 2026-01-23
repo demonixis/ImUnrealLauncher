@@ -1,5 +1,6 @@
 #include "ModernOrangeStyle.h"
 #include "Styles.h"
+#include "Roboto-Regular.h"
 
 namespace Styles
 {
@@ -8,10 +9,14 @@ namespace Styles
         auto& style = ImGui::GetStyle();
         auto& colors = ImGui::GetStyle().Colors;
     	auto& io = ImGui::GetIO();
+        
+        ImFontConfig config;
+        config.FontDataOwnedByAtlas = false;
 
     	// Fonts
-        //main_font = io.Fonts->AddFontFromFileTTF("Assets/Roboto-Regular.ttf", 20);
         main_font = io.Fonts->AddFontDefault();
+        //main_font = io.Fonts->AddFontFromFileTTF("Assets/Roboto-Regular.ttf", 20);
+        main_font = io.Fonts->AddFontFromMemoryTTF(Roboto_Regular, sizeof(Roboto_Regular), 20, &config);
     	IM_ASSERT(main_font != nullptr);
 
 	    // Colors
