@@ -9,7 +9,8 @@ namespace unreal
 
 struct EngineVersion
 {
-    std::string name;
+    std::string versionName;
+    std::string displayName;
     std::filesystem::path path;
 
     bool isValid() const;
