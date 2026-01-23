@@ -9,7 +9,7 @@ namespace unreal
 
 bool EngineVersion::isValid() const
 {
-    if (name.empty() || path.empty())
+    if (versionName.empty() || path.empty())
         return false;
 
     // Check if engine path exists and contains expected structure
@@ -51,7 +51,7 @@ void EngineManager::addVersion(const std::string& name, const std::filesystem::p
     // Check if already exists
     for (auto& ver : m_versions)
     {
-        if (ver.name == name)
+        if (ver.versionName == name)
         {
             ver.path = enginePath;
             spdlog::info("Updated engine version: {} -> {}", name, enginePath.string());
@@ -60,7 +60,7 @@ void EngineManager::addVersion(const std::string& name, const std::filesystem::p
     }
 
     EngineVersion version;
-    version.name = name;
+    version.versionName = name;
     version.path = enginePath;
 
     if (version.isValid())
@@ -79,15 +79,15 @@ void EngineManager::updateVersion(const std::string& oldName, const std::string&
 {
     for (auto& ver : m_versions)
     {
-        if (ver.name == oldName)
+        if (ver.versionName == oldName)
         {
             EngineVersion updated;
-            updated.name = newName;
+            updated.versionName = newName;
             updated.path = newPath;
 
             if (updated.isValid())
             {
-                ver.name = newName;
+                ver.versionName = newName;
                 ver.path = newPath;
                 spdlog::info("Updated engine version: {} -> {} at {}", oldName, newName, newPath.string());
             }
@@ -104,7 +104,7 @@ void EngineManager::updateVersion(const std::string& oldName, const std::string&
 void EngineManager::removeVersion(const std::string& name)
 {
     auto it = std::remove_if(m_versions.begin(), m_versions.end(),
-                             [&name](const EngineVersion& v) { return v.name == name; });
+                             [&name](const EngineVersion& v) { return v.versionName == name; });
     if (it != m_versions.end())
     {
         m_versions.erase(it, m_versions.end());
@@ -116,7 +116,7 @@ const EngineVersion* EngineManager::findVersion(const std::string& name) const
 {
     for (const auto& ver : m_versions)
     {
-        if (ver.name == name)
+        if (ver.versionName == name)
             return &ver;
     }
     return nullptr;
@@ -146,7 +146,7 @@ bool EngineManager::load(const std::filesystem::path& configPath)
         for (const auto& item : json["engines"])
         {
             EngineVersion ver;
-            ver.name = item["name"].get<std::string>();
+            ver.versionName = item["name"].get<std::string>();
             ver.path = item["path"].get<std::string>();
             m_versions.push_back(ver);
         }
@@ -178,7 +178,7 @@ bool EngineManager::save(const std::filesystem::path& configPath) const
         for (const auto& ver : m_versions)
         {
             nlohmann::json item;
-            item["name"] = ver.name;
+            item["name"] = ver.versionName;
             item["path"] = ver.path.string();
             json["engines"].push_back(item);
         }

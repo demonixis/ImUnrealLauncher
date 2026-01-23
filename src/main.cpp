@@ -1,8 +1,15 @@
 #include "app.h"
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
-int main(int argc, char* argv[])
+#ifdef _WIN32
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+#else
+int main(int argc, char** argv)
+#endif
 {
     // Setup logging
     auto console = spdlog::stdout_color_mt("console");

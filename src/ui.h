@@ -45,7 +45,7 @@ class UI
     void renderLogPanel();
 
     void loadProjectIcon(const Project& project);
-    GLuint getProjectIcon(const std::string& projectName);
+    GLuint getProjectIcon(std::filesystem::path projectPath) const;
 
     GLFWwindow* m_window = nullptr;
     ProjectManager* m_projectManager = nullptr;
@@ -80,7 +80,7 @@ class UI
     bool m_logAutoScroll = true;
 
     // Icons
-    std::unordered_map<std::string, GLuint> m_projectIcons;
+    std::unordered_map<std::filesystem::path, GLuint> m_projectIcons;
     GLuint m_defaultIcon = 0;
 
     // Operations

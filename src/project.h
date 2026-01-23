@@ -36,13 +36,13 @@ class ProjectManager
 
     bool addProject(const std::filesystem::path& path);
     bool addProjectsFromFolder(const std::filesystem::path& folderPath);
-    void removeProject(const std::string& name);
+    void removeProject(const std::filesystem::path& folderPath);
 
     const std::vector<Project>& getProjects() const
     {
         return m_projects;
     }
-    Project* findProject(const std::string& name);
+    Project* findProject(const std::filesystem::path& uprojectPath);
 
     bool load(const std::filesystem::path& configPath);
     bool save(const std::filesystem::path& configPath) const;
