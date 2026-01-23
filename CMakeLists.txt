@@ -90,6 +90,8 @@ set(SOURCES
     src/engine.cpp
     src/utils.cpp
     src/config.cpp
+    src/Styles/ModernOrangeStyle.cpp
+    
 )
 
 set(HEADERS
@@ -99,6 +101,8 @@ set(HEADERS
     src/engine.h
     src/utils.h
     src/config.h
+    src/Styles/ModernOrangeStyle.h
+    src/Styles/Styles.h
 )
 
 # Main executable

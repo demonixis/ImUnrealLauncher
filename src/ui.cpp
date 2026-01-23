@@ -8,6 +8,8 @@
 #include <spdlog/spdlog.h>
 
 #define STB_IMAGE_IMPLEMENTATION
+#include "Styles/Styles.h"
+
 #include <stb_image.h>
 
 #include <algorithm>
@@ -57,12 +59,13 @@ bool UI::init()
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 
+    Styles::SetModernOrangeStyle();
     // Setup style
-    ImGui::StyleColorsDark();
     ImGuiStyle& style = ImGui::GetStyle();
     style.WindowRounding = 4.0f;
     style.FrameRounding = 2.0f;
     style.ScrollbarRounding = 2.0f;
+
 
     // Initialize backends
     ImGui_ImplGlfw_InitForOpenGL(m_window, true);
@@ -177,6 +180,8 @@ void UI::render()
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
+    
+    ImGui::PushFont(Styles::main_font);
 
     // Main menu bar
     renderMenuBar();
@@ -226,6 +231,7 @@ void UI::render()
         renderAddProjectWindow();
     }
 
+    ImGui::PopFont();
     // Rendering
     ImGui::Render();
     int displayW, displayH;
@@ -375,6 +381,7 @@ void UI::renderProjectList()
         ImGui::PopID();
     }
 }
+
 
 void UI::renderProjectDetails()
 {
