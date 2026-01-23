@@ -19,7 +19,7 @@ UI::UI() {}
 
 UI::~UI()
 {
-    shutdown();
+    //shutdown();
 }
 
 bool UI::init()
