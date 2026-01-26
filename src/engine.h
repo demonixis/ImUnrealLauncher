@@ -9,7 +9,7 @@ namespace unreal
 
 struct EngineVersion
 {
-    std::string versionName;
+    std::string engineAssociation;
     std::string displayName;
     std::filesystem::path path;
 
@@ -24,14 +24,15 @@ class EngineManager
   public:
     EngineManager() = default;
 
-    void addVersion(const std::string& name, const std::filesystem::path& path);
-    void updateVersion(const std::string& oldName, const std::string& newName, const std::filesystem::path& newPath);
-    void removeVersion(const std::string& name);
+    void addVersion(const std::string& association, const std::string& displayName, const std::filesystem::path& path);
+    void updateVersion(const std::string& association, const std::string& newDisplayName, const std::filesystem::path& newPath);
+    void removeVersion(const std::string& association);
+
+    const EngineVersion* findByAssociation(const std::string& association) const;
     const std::vector<EngineVersion>& getVersions() const
     {
         return m_versions;
     }
-    const EngineVersion* findVersion(const std::string& name) const;
 
     bool load(const std::filesystem::path& configPath);
     bool save(const std::filesystem::path& configPath) const;

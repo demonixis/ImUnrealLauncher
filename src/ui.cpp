@@ -320,7 +320,7 @@ void UI::renderProjectList()
         {
             if (m_engineManager && m_selectedProject)
             {
-                auto* engine = m_engineManager->findVersion(m_selectedProject->engineVersion);
+                auto* engine = m_engineManager->findByAssociation(project.engineVersion);
                 if (engine)
                 {
                     std::thread([this, engine, project = m_selectedProject]()
@@ -343,11 +343,24 @@ void UI::renderProjectList()
 
         ImGui::BeginGroup();
         ImGui::Text("%s", project.name.c_str());
-        ImGui::TextColored(
+        auto* engine = m_engineManager->findByAssociation(project.engineVersion);
+        if (engine)
+        {
+            ImGui::TextColored(
             ImVec4(0.6f, 0.6f, 0.6f, 1.0f),
-            "UE %s",
+            "%s",
+            engine->displayName.c_str()
+            );
+        }
+        else
+        {
+            ImGui::TextColored(
+            ImVec4(0.6f, 0.2f, 0.2f, 0.5f),
+            "%s",
             project.engineVersion.c_str()
-        );
+            );
+        }
+        
         ImGui::EndGroup();
 
         ImGui::EndGroup();
@@ -362,7 +375,7 @@ void UI::renderProjectList()
                 const auto& engines = m_engineManager->getVersions();
                 for (size_t j = 0; j < engines.size(); ++j)
                 {
-                    if (engines[j].versionName == m_selectedProject->engineVersion)
+                    if (engines[j].engineAssociation == m_selectedProject->engineVersion)
                     {
                         m_selectedEngineIndex = (int)j;
                         break;
@@ -397,6 +410,9 @@ void UI::renderProjectDetails()
     // Project name and path
     ImGui::Text("Name: %s", m_selectedProject->name.c_str());
     ImGui::Text("Path: %s", m_selectedProject->path.string().c_str());
+    ImGui::Text("Engine Association: %s", m_selectedProject->engineVersion.c_str());
+    ImGui::Spacing();
+    ImGui::Separator();
     ImGui::Spacing();
 
     // Engine version combo
@@ -405,13 +421,14 @@ void UI::renderProjectDetails()
         const auto& engines = m_engineManager->getVersions();
         if (!engines.empty())
         {
-            ImGui::Text("Engine Version:");
+            ImGui::Text("Launch Engine Version:");
             ImGui::SameLine();
 
             std::vector<const char*> engineNames;
             for (const auto& e : engines)
             {
-                engineNames.push_back(e.versionName.c_str());
+                static std::string displayStr = e.displayName + " : " + e.engineAssociation;
+                engineNames.push_back(displayStr.c_str());
             }
 
             if (ImGui::Combo("##EngineVersion", &m_selectedEngineIndex, engineNames.data(),
@@ -419,7 +436,7 @@ void UI::renderProjectDetails()
             {
                 if (m_selectedEngineIndex >= 0 && m_selectedEngineIndex < static_cast<int>(engines.size()))
                 {
-                    m_selectedProject->engineVersion = engines[m_selectedEngineIndex].versionName;
+                    m_selectedProject->engineVersion = engines[m_selectedEngineIndex].engineAssociation;
                 }
             }
         }
@@ -464,7 +481,7 @@ void UI::renderProjectDetails()
     {
         if (m_engineManager)
         {
-            auto* engine = m_engineManager->findVersion(m_selectedProject->engineVersion);
+            auto* engine = m_engineManager->findByAssociation(m_selectedProject->engineVersion);
             if (engine)
             {
                 log("Generating project files...");
@@ -483,7 +500,7 @@ void UI::renderProjectDetails()
     {
         if (m_engineManager)
         {
-            auto* engine = m_engineManager->findVersion(m_selectedProject->engineVersion);
+            auto* engine = m_engineManager->findByAssociation(m_selectedProject->engineVersion);
             if (engine)
             {
                 log("Building project...");
@@ -502,7 +519,7 @@ void UI::renderProjectDetails()
     {
         if (m_engineManager)
         {
-            auto* engine = m_engineManager->findVersion(m_selectedProject->engineVersion);
+            auto* engine = m_engineManager->findByAssociation(m_selectedProject->engineVersion);
             if (engine)
             {
                 m_currentOperation = m_operations->run(engine->path, m_selectedProject->uprojectPath,
@@ -536,7 +553,7 @@ void UI::renderProjectDetails()
     {
         if (m_engineManager)
         {
-            auto* engine = m_engineManager->findVersion(m_selectedProject->engineVersion);
+            auto* engine = m_engineManager->findByAssociation(m_selectedProject->engineVersion);
             if (engine)
             {
                 Platform platform = static_cast<Platform>(m_selectedPlatformIndex);
@@ -595,14 +612,15 @@ void UI::renderEngineVersionsWindow()
         // Add new engine version
         ImGui::Text("Add Engine Version:");
 
-        ImGui::InputText("Name", m_newEngineName, sizeof(m_newEngineName));
+        ImGui::InputText("DisplayName", m_newEngineName, sizeof(m_newEngineName));
+        ImGui::InputText("EngineAssociation", m_newEngineAssociation, sizeof(m_newEngineAssociation));
         ImGui::InputText("Path", m_newEnginePath, sizeof(m_newEnginePath));
 
         if (ImGui::Button("Add Engine"))
         {
             if (strlen(m_newEngineName) > 0 && strlen(m_newEnginePath) > 0)
             {
-                m_engineManager->addVersion(m_newEngineName, m_newEnginePath);
+                m_engineManager->addVersion(m_newEngineAssociation, m_newEngineName, m_newEnginePath);
                 m_newEngineName[0] = '\0';
                 m_newEnginePath[0] = '\0';
             }
@@ -617,9 +635,10 @@ void UI::renderEngineVersionsWindow()
         {
             const auto& engines = m_engineManager->getVersions();
 
-            if (ImGui::BeginTable("EnginesTable", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg))
+            if (ImGui::BeginTable("EnginesTable", 4, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg))
             {
                 ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthFixed, 100);
+                ImGui::TableSetupColumn("Version", ImGuiTableColumnFlags_WidthFixed, 100);
                 ImGui::TableSetupColumn("Path", ImGuiTableColumnFlags_WidthStretch);
                 ImGui::TableSetupColumn("Actions", ImGuiTableColumnFlags_WidthFixed, 130);
                 ImGui::TableHeadersRow();
@@ -631,21 +650,24 @@ void UI::renderEngineVersionsWindow()
                     ImGui::TableNextRow();
 
                     ImGui::TableSetColumnIndex(0);
-                    ImGui::Text("%s", engine.versionName.c_str());
-
+                    ImGui::Text("%s", engine.displayName.c_str());
+                    
                     ImGui::TableSetColumnIndex(1);
-                    ImGui::Text("%s", engine.path.string().c_str());
+                    ImGui::Text("%s", engine.engineAssociation.c_str());
 
                     ImGui::TableSetColumnIndex(2);
-                    ImGui::PushID(engine.versionName.c_str());
+                    ImGui::Text("%s", engine.path.string().c_str());
+
+                    ImGui::TableSetColumnIndex(3);
+                    ImGui::PushID(engine.engineAssociation.c_str());
                     if (ImGui::Button("Edit"))
                     {
-                        toEdit = engine.versionName;
+                        toEdit = engine.engineAssociation;
                     }
                     ImGui::SameLine();
                     if (ImGui::Button("Remove"))
                     {
-                        toRemove = engine.versionName;
+                        toRemove = engine.engineAssociation;
                     }
                     ImGui::PopID();
                 }
@@ -654,15 +676,21 @@ void UI::renderEngineVersionsWindow()
 
                 if (!toEdit.empty())
                 {
-                    auto* engine = m_engineManager->findVersion(toEdit);
+                    auto* engine = m_engineManager->findByAssociation(toEdit);
                     if (engine)
                     {
                         m_editingEngine = true;
-                        m_editingEngineName = engine->versionName;
-                        strncpy(m_editEngineName, engine->versionName.c_str(), sizeof(m_editEngineName) - 1);
+                        m_editingEngineVersion = engine->engineAssociation;
+                        
+                        strncpy(m_editEngineAssociation, engine->engineAssociation.c_str(), sizeof(m_editEngineAssociation) - 1);
+                        m_editEngineAssociation[sizeof(m_editEngineAssociation) - 1] = '\0';
+                        
+                        strncpy(m_editEngineName, engine->displayName.c_str(), sizeof(m_editEngineName) - 1);
                         m_editEngineName[sizeof(m_editEngineName) - 1] = '\0';
+                        
                         strncpy(m_editEnginePath, engine->path.string().c_str(), sizeof(m_editEnginePath) - 1);
                         m_editEnginePath[sizeof(m_editEnginePath) - 1] = '\0';
+                        
                         ImGui::OpenPopup("Edit Engine");
                     }
                 }
@@ -680,6 +708,7 @@ void UI::renderEngineVersionsWindow()
             ImGui::Text("Edit Engine Version:");
             ImGui::Spacing();
 
+            ImGui::InputText("Version##Edit", m_editEngineAssociation, sizeof(m_editEngineAssociation));
             ImGui::InputText("Name##Edit", m_editEngineName, sizeof(m_editEngineName));
             ImGui::InputText("Path##Edit", m_editEnginePath, sizeof(m_editEnginePath));
 
@@ -689,8 +718,9 @@ void UI::renderEngineVersionsWindow()
             {
                 if (strlen(m_editEngineName) > 0 && strlen(m_editEnginePath) > 0)
                 {
-                    m_engineManager->updateVersion(m_editingEngineName, m_editEngineName, m_editEnginePath);
+                    m_engineManager->updateVersion(m_editingEngineVersion, m_editEngineName, m_editEnginePath);
                     m_editingEngine = false;
+                    m_engineManager->save(Config::instance().getEnginesConfigPath());
                     ImGui::CloseCurrentPopup();
                 }
             }
@@ -736,6 +766,7 @@ void UI::renderAddProjectWindow()
                 {
                     m_showAddProjectWindow = false;
                     m_newProjectPath[0] = '\0';
+                    m_projectManager->save(Config::instance().getProjectsConfigPath());
                 }
             }
         }
