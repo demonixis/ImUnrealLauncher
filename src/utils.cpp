@@ -292,6 +292,10 @@ std::future<bool> ProjectOperations::generateProjectFiles(const std::filesystem:
 
                           std::string command =
                               "\"" + script.string() + "\" \"" + uprojectPath.string() + "\" -game 2>&1";
+                          
+#ifdef _WIN32
+                            command = "\""+ command + "\"";
+#endif
 
                           int result = m_executor.execute(command);
                           return result == 0;
@@ -325,6 +329,10 @@ std::future<bool> ProjectOperations::build(const std::filesystem::path& enginePa
                           std::string command = "\"" + buildScript.string() + "\" " + target + " " + platform + " " +
                                                 configStr + " -Project=\"" + uprojectPath.string() +
                                                 "\" -WaitMutex -Progress -NoHotReload 2>&1";
+                          
+#ifdef _WIN32
+                            command = "\""+ command + "\"";
+#endif
 
                           int result = m_executor.execute(command);
                           return result == 0;
@@ -355,7 +363,10 @@ std::future<bool> ProjectOperations::run(const std::filesystem::path& enginePath
                               command += " " + additionalArgs;
                           }
                           command += " 2>&1";
-
+#ifdef _WIN32
+                          command = "\""+ command + "\"";
+#endif
+                          
                           int result = m_executor.execute(command);
                           return result == 0;
                       });

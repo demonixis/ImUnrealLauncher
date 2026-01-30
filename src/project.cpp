@@ -111,7 +111,7 @@ bool ProjectManager::addProject(const std::filesystem::path& projectPath)
     auto projectName = uprojectFile->stem().string();
     for (const auto& proj : m_projects)
     {
-        if (proj.name == projectName)
+        if (proj.name == projectName && proj.uprojectPath == *uprojectFile)
         {
             log("Project already exists: " + projectName, true);
             return false;
@@ -165,22 +165,26 @@ bool ProjectManager::addProjectsFromFolder(const std::filesystem::path& folderPa
     return addedAny;
 }
 
-void ProjectManager::removeProject(const std::string& name)
+void ProjectManager::removeProject(const std::filesystem::path& uprojectPath)
 {
-    auto it =
-        std::remove_if(m_projects.begin(), m_projects.end(), [&name](const Project& p) { return p.name == name; });
+    auto it = std::remove_if(m_projects.begin(), m_projects.end(),
+        [&](const Project& p)
+        {
+            return p.uprojectPath == uprojectPath;
+        });
+
     if (it != m_projects.end())
     {
         m_projects.erase(it, m_projects.end());
-        log("Removed project: " + name);
+        log("Removed project: " + uprojectPath.string());
     }
 }
 
-Project* ProjectManager::findProject(const std::string& name)
+Project* ProjectManager::findProject(const std::filesystem::path& uprojectPath)
 {
     for (auto& proj : m_projects)
     {
-        if (proj.name == name)
+        if (proj.uprojectPath == uprojectPath)
             return &proj;
     }
     return nullptr;
@@ -267,7 +271,7 @@ bool ProjectManager::save(const std::filesystem::path& configPath) const
             item["path"] = proj.path.string();
             item["uprojectPath"] = proj.uprojectPath.string();
             item["engineVersion"] = proj.engineVersion;
-            item["iconPath"] = proj.iconPath ? proj.iconPath->string() : nullptr;
+            item["iconPath"] = proj.iconPath ? proj.iconPath->string() : "";
             item["commandLineArgs"] = proj.commandLineArgs;
             json["projects"].push_back(item);
         }

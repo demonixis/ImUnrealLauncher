@@ -45,7 +45,7 @@ class UI
     void renderLogPanel();
 
     void loadProjectIcon(const Project& project);
-    GLuint getProjectIcon(const std::string& projectName);
+    GLuint getProjectIcon(std::filesystem::path projectPath) const;
 
     GLFWwindow* m_window = nullptr;
     ProjectManager* m_projectManager = nullptr;
@@ -59,13 +59,15 @@ class UI
     bool m_showAddProjectWindow = false;
     bool m_addProjectIsFolder = false;
     char m_newEngineName[256] = "";
+    char m_newEngineAssociation[256] = "";
     char m_newEnginePath[1024] = "";
     char m_newProjectPath[1024] = "";
 
     // Engine editing state
     bool m_editingEngine = false;
-    std::string m_editingEngineName;
+    std::string m_editingEngineVersion;
     char m_editEngineName[256] = "";
+    char m_editEngineAssociation[256] = "";
     char m_editEnginePath[1024] = "";
 
     // Project command line args
@@ -80,7 +82,7 @@ class UI
     bool m_logAutoScroll = true;
 
     // Icons
-    std::unordered_map<std::string, GLuint> m_projectIcons;
+    std::unordered_map<std::filesystem::path, GLuint> m_projectIcons;
     GLuint m_defaultIcon = 0;
 
     // Operations

@@ -8,6 +8,8 @@
 #include <spdlog/spdlog.h>
 
 #define STB_IMAGE_IMPLEMENTATION
+#include "Styles/Styles.h"
+
 #include <stb_image.h>
 
 #include <algorithm>
@@ -19,7 +21,7 @@ UI::UI() {}
 
 UI::~UI()
 {
-    shutdown();
+    //shutdown();
 }
 
 bool UI::init()
@@ -40,7 +42,7 @@ bool UI::init()
 #endif
 
     // Create window
-    m_window = glfwCreateWindow(1024, 768, "Unreal Launcher", nullptr, nullptr);
+    m_window = glfwCreateWindow(1366, 768, "Unreal Launcher", nullptr, nullptr);
     if (!m_window)
     {
         spdlog::error("Failed to create GLFW window");
@@ -57,12 +59,13 @@ bool UI::init()
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 
+    Styles::SetModernOrangeStyle();
     // Setup style
-    ImGui::StyleColorsDark();
     ImGuiStyle& style = ImGui::GetStyle();
     style.WindowRounding = 4.0f;
     style.FrameRounding = 2.0f;
     style.ScrollbarRounding = 2.0f;
+
 
     // Initialize backends
     ImGui_ImplGlfw_InitForOpenGL(m_window, true);
@@ -139,7 +142,7 @@ void UI::log(const std::string& message, bool isError)
 
 void UI::loadProjectIcon(const Project& project)
 {
-    if (m_projectIcons.count(project.name))
+    if (m_projectIcons.count(project.uprojectPath))
         return;
 
     GLuint texture = 0;
@@ -157,12 +160,12 @@ void UI::loadProjectIcon(const Project& project)
             stbi_image_free(data);
         }
     }
-    m_projectIcons[project.name] = texture;
+    m_projectIcons[project.uprojectPath] = texture;
 }
 
-GLuint UI::getProjectIcon(const std::string& projectName)
+GLuint UI::getProjectIcon(std::filesystem::path projectPath) const
 {
-    auto it = m_projectIcons.find(projectName);
+    auto it = m_projectIcons.find(projectPath);
     if (it != m_projectIcons.end() && it->second != 0)
     {
         return it->second;
@@ -177,6 +180,8 @@ void UI::render()
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
+    
+    ImGui::PushFont(Styles::main_font);
 
     // Main menu bar
     renderMenuBar();
@@ -226,6 +231,7 @@ void UI::render()
         renderAddProjectWindow();
     }
 
+    ImGui::PopFont();
     // Rendering
     ImGui::Render();
     int displayW, displayH;
@@ -286,93 +292,109 @@ void UI::renderProjectList()
     const auto& projects = m_projectManager->getProjects();
     bool operationRunning = m_operations && m_operations->isRunning();
 
-    for (size_t i = 0; i < projects.size(); ++i)
+    for (const auto& project : projects)
     {
-        const auto& project = projects[i];
-
-        // Load icon if not loaded
         loadProjectIcon(project);
 
-        ImGui::PushID(static_cast<int>(i));
+        ImGui::PushID(project.uprojectPath.string().c_str());
 
-        // Create selectable item with icon
-        bool isSelected = (m_selectedProject && m_selectedProject->name == project.name);
+        bool isSelected =
+            m_selectedProject &&
+            m_selectedProject->uprojectPath == project.uprojectPath;
 
-        ImVec2 itemSize(ImGui::GetContentRegionAvail().x, 50);
-        ImVec2 cursorPos = ImGui::GetCursorScreenPos();
+        ImVec2 itemSize(ImGui::GetContentRegionAvail().x, 50.0f);
 
-        // Disable selection while operation is running
         ImGuiSelectableFlags flags = ImGuiSelectableFlags_None;
-        if (operationRunning)
-        {
-            flags |= ImGuiSelectableFlags_Disabled;
-        }
 
-        if (ImGui::Selectable("##project", isSelected, flags, itemSize))
-        {
-            m_selectedProject = m_projectManager->findProject(project.name);
+        ImGui::BeginGroup();
 
-            // Update engine index
-            if (m_engineManager && m_selectedProject)
-            {
-                const auto& engines = m_engineManager->getVersions();
-                for (size_t j = 0; j < engines.size(); ++j)
-                {
-                    if (engines[j].name == m_selectedProject->engineVersion)
-                    {
-                        m_selectedEngineIndex = static_cast<int>(j);
-                        break;
-                    }
-                }
-            }
-
-            // Load command line args
-            if (m_selectedProject)
-            {
-                strncpy(m_commandLineArgs, m_selectedProject->commandLineArgs.c_str(), sizeof(m_commandLineArgs) - 1);
-                m_commandLineArgs[sizeof(m_commandLineArgs) - 1] = '\0';
-            }
-        }
-
+        bool clicked = ImGui::Selectable(
+            "##project",
+            isSelected,
+            flags,
+            itemSize
+        );
+        
         // Double-click to launch (only if not running)
         if (!operationRunning && ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0))
         {
             if (m_engineManager && m_selectedProject)
             {
-                auto* engine = m_engineManager->findVersion(m_selectedProject->engineVersion);
+                auto* engine = m_engineManager->findByAssociation(project.engineVersion);
                 if (engine)
                 {
-                    m_operations->run(engine->path, m_selectedProject->uprojectPath,
-                                      m_selectedProject->commandLineArgs);
+                    std::thread([this, engine, project = m_selectedProject]()
+                    {
+                        m_operations->run(engine->path, project->uprojectPath, project->commandLineArgs);
+                    }).detach();
                 }
             }
         }
+        
+        ImGui::SameLine(10);
 
-        // Draw content over the selectable
-        ImGui::SetCursorScreenPos(cursorPos);
-
-        // Icon
-        GLuint icon = getProjectIcon(project.name);
-        if (icon)
-        {
-            ImGui::Image(static_cast<ImTextureID>(icon), ImVec2(40, 40));
-        }
-        else
-        {
-            ImGui::Dummy(ImVec2(40, 40));
-        }
+        GLuint icon = getProjectIcon(project.uprojectPath);
+        ImGui::Image(
+            (ImTextureID)icon,
+            ImVec2(40, 40)
+        );
 
         ImGui::SameLine();
 
-        // Text
         ImGui::BeginGroup();
         ImGui::Text("%s", project.name.c_str());
-        ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "UE %s", project.engineVersion.c_str());
+        auto* engine = m_engineManager->findByAssociation(project.engineVersion);
+        if (engine)
+        {
+            ImGui::TextColored(
+            ImVec4(0.6f, 0.6f, 0.6f, 1.0f),
+            "%s",
+            engine->displayName.c_str()
+            );
+        }
+        else
+        {
+            ImGui::TextColored(
+            ImVec4(0.6f, 0.2f, 0.2f, 0.5f),
+            "%s",
+            project.engineVersion.c_str()
+            );
+        }
+        
         ImGui::EndGroup();
+
+        ImGui::EndGroup();
+
+        if (clicked)
+        {
+            m_selectedProject =
+                m_projectManager->findProject(project.uprojectPath);
+
+            if (m_engineManager && m_selectedProject)
+            {
+                const auto& engines = m_engineManager->getVersions();
+                for (size_t j = 0; j < engines.size(); ++j)
+                {
+                    if (engines[j].engineAssociation == m_selectedProject->engineVersion)
+                    {
+                        m_selectedEngineIndex = (int)j;
+                        break;
+                    }
+                }
+            }
+
+            strncpy(
+                m_commandLineArgs,
+                m_selectedProject->commandLineArgs.c_str(),
+                sizeof(m_commandLineArgs) - 1
+            );
+            m_commandLineArgs[sizeof(m_commandLineArgs) - 1] = '\0';
+        }
 
         ImGui::PopID();
     }
 }
+
 
 void UI::renderProjectDetails()
 {
@@ -388,6 +410,9 @@ void UI::renderProjectDetails()
     // Project name and path
     ImGui::Text("Name: %s", m_selectedProject->name.c_str());
     ImGui::Text("Path: %s", m_selectedProject->path.string().c_str());
+    ImGui::Text("Engine Association: %s", m_selectedProject->engineVersion.c_str());
+    ImGui::Spacing();
+    ImGui::Separator();
     ImGui::Spacing();
 
     // Engine version combo
@@ -396,13 +421,14 @@ void UI::renderProjectDetails()
         const auto& engines = m_engineManager->getVersions();
         if (!engines.empty())
         {
-            ImGui::Text("Engine Version:");
+            ImGui::Text("Launch Engine Version:");
             ImGui::SameLine();
 
             std::vector<const char*> engineNames;
             for (const auto& e : engines)
             {
-                engineNames.push_back(e.name.c_str());
+                static std::string displayStr = e.displayName + " : " + e.engineAssociation;
+                engineNames.push_back(displayStr.c_str());
             }
 
             if (ImGui::Combo("##EngineVersion", &m_selectedEngineIndex, engineNames.data(),
@@ -410,7 +436,7 @@ void UI::renderProjectDetails()
             {
                 if (m_selectedEngineIndex >= 0 && m_selectedEngineIndex < static_cast<int>(engines.size()))
                 {
-                    m_selectedProject->engineVersion = engines[m_selectedEngineIndex].name;
+                    m_selectedProject->engineVersion = engines[m_selectedEngineIndex].engineAssociation;
                 }
             }
         }
@@ -455,7 +481,7 @@ void UI::renderProjectDetails()
     {
         if (m_engineManager)
         {
-            auto* engine = m_engineManager->findVersion(m_selectedProject->engineVersion);
+            auto* engine = m_engineManager->findByAssociation(m_selectedProject->engineVersion);
             if (engine)
             {
                 log("Generating project files...");
@@ -474,7 +500,7 @@ void UI::renderProjectDetails()
     {
         if (m_engineManager)
         {
-            auto* engine = m_engineManager->findVersion(m_selectedProject->engineVersion);
+            auto* engine = m_engineManager->findByAssociation(m_selectedProject->engineVersion);
             if (engine)
             {
                 log("Building project...");
@@ -493,7 +519,7 @@ void UI::renderProjectDetails()
     {
         if (m_engineManager)
         {
-            auto* engine = m_engineManager->findVersion(m_selectedProject->engineVersion);
+            auto* engine = m_engineManager->findByAssociation(m_selectedProject->engineVersion);
             if (engine)
             {
                 m_currentOperation = m_operations->run(engine->path, m_selectedProject->uprojectPath,
@@ -527,7 +553,7 @@ void UI::renderProjectDetails()
     {
         if (m_engineManager)
         {
-            auto* engine = m_engineManager->findVersion(m_selectedProject->engineVersion);
+            auto* engine = m_engineManager->findByAssociation(m_selectedProject->engineVersion);
             if (engine)
             {
                 Platform platform = static_cast<Platform>(m_selectedPlatformIndex);
@@ -563,9 +589,9 @@ void UI::renderProjectDetails()
 
         if (ImGui::Button("Yes", ImVec2(80, 0)))
         {
-            std::string nameToRemove = m_selectedProject->name;
+            auto pathToRemove  = m_selectedProject->uprojectPath;
             m_selectedProject = nullptr;
-            m_projectManager->removeProject(nameToRemove);
+            m_projectManager->removeProject(pathToRemove);
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
@@ -586,14 +612,15 @@ void UI::renderEngineVersionsWindow()
         // Add new engine version
         ImGui::Text("Add Engine Version:");
 
-        ImGui::InputText("Name", m_newEngineName, sizeof(m_newEngineName));
+        ImGui::InputText("DisplayName", m_newEngineName, sizeof(m_newEngineName));
+        ImGui::InputText("EngineAssociation", m_newEngineAssociation, sizeof(m_newEngineAssociation));
         ImGui::InputText("Path", m_newEnginePath, sizeof(m_newEnginePath));
 
         if (ImGui::Button("Add Engine"))
         {
             if (strlen(m_newEngineName) > 0 && strlen(m_newEnginePath) > 0)
             {
-                m_engineManager->addVersion(m_newEngineName, m_newEnginePath);
+                m_engineManager->addVersion(m_newEngineAssociation, m_newEngineName, m_newEnginePath);
                 m_newEngineName[0] = '\0';
                 m_newEnginePath[0] = '\0';
             }
@@ -608,9 +635,10 @@ void UI::renderEngineVersionsWindow()
         {
             const auto& engines = m_engineManager->getVersions();
 
-            if (ImGui::BeginTable("EnginesTable", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg))
+            if (ImGui::BeginTable("EnginesTable", 4, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg))
             {
                 ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthFixed, 100);
+                ImGui::TableSetupColumn("Version", ImGuiTableColumnFlags_WidthFixed, 100);
                 ImGui::TableSetupColumn("Path", ImGuiTableColumnFlags_WidthStretch);
                 ImGui::TableSetupColumn("Actions", ImGuiTableColumnFlags_WidthFixed, 130);
                 ImGui::TableHeadersRow();
@@ -622,21 +650,24 @@ void UI::renderEngineVersionsWindow()
                     ImGui::TableNextRow();
 
                     ImGui::TableSetColumnIndex(0);
-                    ImGui::Text("%s", engine.name.c_str());
-
+                    ImGui::Text("%s", engine.displayName.c_str());
+                    
                     ImGui::TableSetColumnIndex(1);
-                    ImGui::Text("%s", engine.path.string().c_str());
+                    ImGui::Text("%s", engine.engineAssociation.c_str());
 
                     ImGui::TableSetColumnIndex(2);
-                    ImGui::PushID(engine.name.c_str());
+                    ImGui::Text("%s", engine.path.string().c_str());
+
+                    ImGui::TableSetColumnIndex(3);
+                    ImGui::PushID(engine.engineAssociation.c_str());
                     if (ImGui::Button("Edit"))
                     {
-                        toEdit = engine.name;
+                        toEdit = engine.engineAssociation;
                     }
                     ImGui::SameLine();
                     if (ImGui::Button("Remove"))
                     {
-                        toRemove = engine.name;
+                        toRemove = engine.engineAssociation;
                     }
                     ImGui::PopID();
                 }
@@ -645,15 +676,21 @@ void UI::renderEngineVersionsWindow()
 
                 if (!toEdit.empty())
                 {
-                    auto* engine = m_engineManager->findVersion(toEdit);
+                    auto* engine = m_engineManager->findByAssociation(toEdit);
                     if (engine)
                     {
                         m_editingEngine = true;
-                        m_editingEngineName = engine->name;
-                        strncpy(m_editEngineName, engine->name.c_str(), sizeof(m_editEngineName) - 1);
+                        m_editingEngineVersion = engine->engineAssociation;
+                        
+                        strncpy(m_editEngineAssociation, engine->engineAssociation.c_str(), sizeof(m_editEngineAssociation) - 1);
+                        m_editEngineAssociation[sizeof(m_editEngineAssociation) - 1] = '\0';
+                        
+                        strncpy(m_editEngineName, engine->displayName.c_str(), sizeof(m_editEngineName) - 1);
                         m_editEngineName[sizeof(m_editEngineName) - 1] = '\0';
+                        
                         strncpy(m_editEnginePath, engine->path.string().c_str(), sizeof(m_editEnginePath) - 1);
                         m_editEnginePath[sizeof(m_editEnginePath) - 1] = '\0';
+                        
                         ImGui::OpenPopup("Edit Engine");
                     }
                 }
@@ -671,6 +708,7 @@ void UI::renderEngineVersionsWindow()
             ImGui::Text("Edit Engine Version:");
             ImGui::Spacing();
 
+            ImGui::InputText("Version##Edit", m_editEngineAssociation, sizeof(m_editEngineAssociation));
             ImGui::InputText("Name##Edit", m_editEngineName, sizeof(m_editEngineName));
             ImGui::InputText("Path##Edit", m_editEnginePath, sizeof(m_editEnginePath));
 
@@ -680,8 +718,9 @@ void UI::renderEngineVersionsWindow()
             {
                 if (strlen(m_editEngineName) > 0 && strlen(m_editEnginePath) > 0)
                 {
-                    m_engineManager->updateVersion(m_editingEngineName, m_editEngineName, m_editEnginePath);
+                    m_engineManager->updateVersion(m_editingEngineVersion, m_editEngineName, m_editEnginePath);
                     m_editingEngine = false;
+                    m_engineManager->save(Config::instance().getEnginesConfigPath());
                     ImGui::CloseCurrentPopup();
                 }
             }
@@ -727,6 +766,7 @@ void UI::renderAddProjectWindow()
                 {
                     m_showAddProjectWindow = false;
                     m_newProjectPath[0] = '\0';
+                    m_projectManager->save(Config::instance().getProjectsConfigPath());
                 }
             }
         }
@@ -791,7 +831,7 @@ void UI::renderLogPanel()
             }
 
             // Context menu for copying individual line
-            if (ImGui::BeginPopupContextItem(nullptr))
+            if (ImGui::BeginPopupContextItem(""))
             {
                 if (ImGui::Selectable("Copy line"))
                 {
